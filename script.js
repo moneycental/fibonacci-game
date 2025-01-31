@@ -1,142 +1,202 @@
-// script.js
+// Wait for DOM to load
+document.addEventListener("DOMContentLoaded", () => {
+    const fibonacciSequence = [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+    let currentIndex = 0;
+    let score = 0;
+    let dropSpeed = 2;
+    let isGameOver = false;
 
-const fibonacciSequence = [
-    0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584,
-    4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811, 514229,
-    832040, 1346269, 2178309, 3524578, 5702887, 9227465, 14930352, 24157817, 39088169,
-    63245986, 102334155, 165580141, 267914296, 433494437, 701408733, 1134903170,
-    1836311903, 2971215073, 4807526976, 7778742049
-];
-let currentIndex = 0; // Track the current Fibonacci index
-const numberBar = document.getElementById("number-bar");
+    // Get references
+    const gameContainer = document.getElementById("game-container");
 
-// Function to create explosion bits
-function createBits(parentDiv, centerX, centerY) {
-    const bitCount = 10; // Increased for more dramatic explosions
-    const colors = ["#FF5733", "#FFC300", "#C70039", "#900C3F"];
+    // Create Windows 7-style number bar window dynamically
+    const numberBarWindow = document.createElement("div");
+    numberBarWindow.classList.add("window");
 
-    for (let i = 0; i < bitCount; i++) {
-        const bit = document.createElement("div");
-        bit.classList.add("explode-bit");
+    // Add title bar
+    const titleBar = document.createElement("header");
+    titleBar.classList.add("title-bar");
+    titleBar.innerHTML = `
+        <span class="title-bar-text">Number Bar</span>
+        <div class="title-bar-controls">
+            <button aria-label="Minimize" class="minimize-btn"></button>
+            <button aria-label="Close" class="close-btn"></button>
+        </div>
+    `;
 
-        bit.style.left = `${centerX - 4}px`;
-        bit.style.top = `${centerY - 4}px`;
-        bit.style.backgroundColor = colors[i % colors.length];
+    // Create number bar container
+    const windowBody = document.createElement("div");
+    windowBody.classList.add("window-body");
+    windowBody.id = "number-bar";
 
-        parentDiv.appendChild(bit);
+    // Append everything
+    numberBarWindow.appendChild(titleBar);
+    numberBarWindow.appendChild(windowBody);
+    gameContainer.appendChild(numberBarWindow);
 
-        // Animate each bit flying in random directions with GSAP
-        const randomAngle = Math.random() * Math.PI * 2;
-        const randomDistance = Math.random() * 80 + 20;
+    // Styling for Windows 7-like appearance
+    const style = document.createElement("style");
+    style.textContent = `
+        .window {
+            margin: 20px auto;
+            width: 800px;
+            border: 2px solid #a9a9a9;
+            border-radius: 6px;
+            box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            background: #ffffff;
+        }
+        .title-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to bottom, #ececec, #d4d4d4);
+            border: 1px solid #a9a9a9;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+            padding: 0.5rem;
+            font-size: 14px;
+            font-weight: bold;
+            color: black;
+            cursor: default;
+        }
+        .title-bar-text {
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            font-size: 12px;
+        }
+        .title-bar-controls {
+            display: flex;
+            gap: 4px;
+        }
+        .title-bar-controls button {
+            width: 16px;
+            height: 16px;
+            border: 1px solid #a9a9a9;
+            border-radius: 2px;
+            background: #f3f3f3;
+            cursor: pointer;
+        }
+        .title-bar-controls button:hover {
+            background: #d6d6d6;
+        }
+        .window-body {
+            padding: 10px;
+            background: #e0e0e0;
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            height: 50px;
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+        }
+        .number {
+            padding: 5px 10px;
+            background: #4caf50;
+            color: white;
+            border-radius: 4px;
+            font-size: 18px;
+            text-align: center;
+            margin-right: 10px;
+            display: inline-block;
+            position: relative;
+        }
+        .number.wrong {
+            background: #ff5733;
+        }
+    `;
+    document.head.appendChild(style);
 
-        gsap.to(bit, {
-            x: Math.cos(randomAngle) * randomDistance,
-            y: Math.sin(randomAngle) * randomDistance,
-            scale: Math.random() + 0.5,
-            opacity: 0,
-            duration: 1.5,
-            ease: "power2.out",
-            onComplete: () => bit.remove() // Remove bit after animation
+    // Minimize and close button functionality
+    const minimizeBtn = numberBarWindow.querySelector(".minimize-btn");
+    const closeBtn = numberBarWindow.querySelector(".close-btn");
+
+    minimizeBtn.addEventListener("click", () => {
+        windowBody.style.display = windowBody.style.display === "none" ? "flex" : "none";
+    });
+
+    closeBtn.addEventListener("click", () => {
+        numberBarWindow.style.display = "none";
+    });
+
+    // Score Display
+    const scoreDisplay = document.createElement("div");
+    scoreDisplay.innerText = "Score: 0";
+    scoreDisplay.className = "score-display";
+    gameContainer.appendChild(scoreDisplay);
+
+    // Input Field
+    const inputField = document.createElement("input");
+    inputField.type = "number";
+    inputField.placeholder = "Enter Fibonacci Number";
+    inputField.className = "field";
+    gameContainer.appendChild(inputField);
+
+    // Submit Button
+    const submitButton = document.createElement("button");
+    submitButton.innerText = "Submit";
+    submitButton.className = "button primary";
+    gameContainer.appendChild(submitButton);
+
+    // Function to slide numbers left when the number bar is full
+    function slideNumbers() {
+        const numbers = windowBody.querySelectorAll(".number");
+        let totalWidth = 0;
+
+        numbers.forEach((num) => {
+            totalWidth += num.offsetWidth + 10; // Add spacing
         });
-    }
-}
 
-// Function to animate the number
-function animateNumber(number, isCorrect) {
-    const numberDiv = document.createElement("div");
-    numberDiv.classList.add("number");
-    if (!isCorrect) numberDiv.classList.add("wrong");
-    numberDiv.innerText = number;
-
-    numberBar.appendChild(numberDiv);
-
-    if (!isCorrect) {
-        // Animate incorrect number: Drop halfway and explode
-        gsap.fromTo(
-            numberDiv,
-            { y: -50, opacity: 1 },
-            {
-                y: 20, // Drop to slightly above the bottom
-                opacity: 1,
+        if (totalWidth > windowBody.offsetWidth) {
+            gsap.to(numbers, {
+                x: "-=60", // Move all numbers left by 60px
                 duration: 0.5,
-                ease: "power1.in",
-                onComplete: () => {
-                    const rect = numberDiv.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2 - numberBar.offsetLeft;
-                    const centerY = rect.top + rect.height / 2 - numberBar.offsetTop;
-
-                    createBits(numberBar, centerX, centerY);
-                    numberDiv.remove(); // Remove the incorrect number
-                }
-            }
-        );
-    } else {
-        // Animate correct number: Drop fully to the bottom
-        gsap.fromTo(
-            numberDiv,
-            { y: -50, opacity: 1 },
-            {
-                y: 0, // Align at the bottom
-                opacity: 1,
-                duration: 1,
-                ease: "bounce.out" // Bounce as it lands
-            }
-        );
-    }
-}
-
-// Function to show a message
-function showMessage(text, isSuccess) {
-    const messageDiv = document.createElement("div");
-    messageDiv.innerText = text;
-    messageDiv.classList.add(isSuccess ? "message-success" : "message-error");
-    document.getElementById("game-container").appendChild(messageDiv);
-
-    // Remove message after 2 seconds
-    setTimeout(() => messageDiv.remove(), 2000);
-}
-
-// Function to handle the submission
-function handleSubmit() {
-    const input = document.getElementById("fibonacci-input").value.trim();
-    const number = parseInt(input, 10);
-
-    if (isNaN(number)) {
-        showMessage("Please enter a valid number.", false);
-        return;
+                ease: "power1.out",
+            });
+        }
     }
 
-    if (number === fibonacciSequence[currentIndex]) {
-        // Correct number in sequence
-        animateNumber(number, true);
-        showMessage(`${number} is correct!`, true);
-        currentIndex++; // Move to the next number
-    } else if (fibonacciSequence.includes(number)) {
-        // Correct number but out of sequence
-        showMessage(`${number} is out of sequence!`, false);
-        animateNumber(number, false);
-    } else {
-        // Not a Fibonacci number
-        showMessage(`${number} is not a Fibonacci number.`, false);
-        animateNumber(number, false);
+    // Function to check input and add numbers
+    function checkInput() {
+        const inputValue = parseInt(inputField.value, 10);
+        if (inputValue === fibonacciSequence[currentIndex]) {
+            score++;
+            scoreDisplay.innerText = `Score: ${score}`;
+            currentIndex++;
+
+            // Add number to number bar
+            const numberDiv = document.createElement("div");
+            numberDiv.className = "number";
+            numberDiv.innerText = inputValue;
+            windowBody.appendChild(numberDiv);
+
+            // Animate number drop
+            gsap.fromTo(
+                numberDiv,
+                { y: -50, opacity: 0 },
+                { y: 0, opacity: 1, duration: 0.5, ease: "bounce.out" }
+            );
+
+            // Slide numbers if necessary
+            slideNumbers();
+        } else {
+            endGame();
+        }
+
+        inputField.value = "";
     }
 
-    document.getElementById("fibonacci-input").value = "";
-}
-
-// Reset Button Logic
-document.getElementById("reset-button").addEventListener("click", () => {
-    currentIndex = 0; // Reset the index
-    numberBar.innerHTML = ""; // Clear the number bar
-    showMessage("Game reset! Start with 0", true);
-});
-
-// Add event listeners for both the Submit button and Enter key
-document.getElementById("submit-button").addEventListener("click", handleSubmit);
-
-// Add Enter key functionality
-document.getElementById("fibonacci-input").addEventListener("keypress", (event) => {
-    if (event.key === "Enter") {
-        handleSubmit();
+    // Function to end the game
+    function endGame() {
+        isGameOver = true;
+        alert(`Game Over! Your score: ${score}`);
     }
+
+    // Event Listeners
+    submitButton.addEventListener("click", checkInput);
+    inputField.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            checkInput();
+        }
+    });
 });
